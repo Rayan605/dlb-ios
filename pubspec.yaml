@@ -1,6 +1,6 @@
 name: listeparty_app
-description: Liste Party — Dans le bon. Application mobile de réservation de soirées.
-publish_to: "none"
+description: Liste Party — application mobile de réservation de soirées.
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
@@ -8,33 +8,39 @@ environment:
   flutter: ">=3.27.0"
 
 dependencies:
-  flutter: 
+  flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.8
 
-  # Réseau / état
   http: ^1.2.2
   provider: ^6.1.2
-  shared_preferences: ^2.3.2
-
-  # UI
+  shared_preferences: ^2.3.3
   google_fonts: ^6.2.1
   intl: ^0.19.0
   cached_network_image: ^3.4.1
-
-  # Paiement Stripe (via Checkout dans une WebView)
-  webview_flutter: ^4.9.0
+  webview_flutter: ^4.10.0
   url_launcher: ^6.3.1
-
-  # Scanner de QR codes (comptes scanner)
-  mobile_scanner: ^5.2.3
-
-  # Notifications locales (feed in-app + alerte nouvelle soirée)
-  flutter_local_notifications: ^17.2.3
-
-  cupertino_icons: ^1.0.8
+  mobile_scanner: ^6.0.2
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
-  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
+
+# Configuration de l'icône d'application (générée à partir de assets/ios.png)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/ios.png"
+  # Pour Android, si assets/ios.png contient de la transparence, un fond plein
+  # évite un rendu bizarre sur les launchers qui n'aiment pas la transparence :
+  # adaptive_icon_background: "#0C0C0C"
+  # adaptive_icon_foreground: "assets/ios.png"
+  remove_alpha_ios: true   # Apple refuse la transparence sur l'icône iOS
