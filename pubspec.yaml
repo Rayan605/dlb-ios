@@ -1,0 +1,40 @@
+name: listeparty_app
+description: Liste Party — Dans le bon. Application mobile de réservation de soirées.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter: 
+    sdk: flutter
+
+  # Réseau / état
+  http: ^1.2.2
+  provider: ^6.1.2
+  shared_preferences: ^2.3.2
+
+  # UI
+  google_fonts: ^6.2.1
+  intl: ^0.19.0
+  cached_network_image: ^3.4.1
+
+  # Paiement Stripe (via Checkout dans une WebView)
+  webview_flutter: ^4.9.0
+  url_launcher: ^6.3.1
+
+  # Scanner de QR codes (comptes scanner)
+  mobile_scanner: ^5.2.3
+
+  # Notifications locales (feed in-app + alerte nouvelle soirée)
+  flutter_local_notifications: ^17.2.3
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

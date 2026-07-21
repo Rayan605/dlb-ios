@@ -1,0 +1,98 @@
+default_platform(:ios)
+
+APP_ID = "com.caziz.listeparty"
+
+platform :ios do
+  private_lane :connect_api_key do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_API_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_CONTENT"),
+      is_key_content_base64: true
+    )
+  end
+
+  # Recupere le nom du provisioning profile genere par match, de facon robuste :
+  # 1) via le mapping expose dans le lane_context (source la plus fiable)
+  # 2) fallback sur la variable d'env sigh_<bundle_id>_appstore_profile-name
+  private_lane :appstore_profile_name do
+    mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
+    name = mapping[APP_ID] || ENV["sigh_#{APP_ID}_appstore_profile-name"]
+
+    UI.user_error!(
+      "Impossible de determiner le provisioning profile pour #{APP_ID}. " \
+      "match a-t-il bien tourne avant ? Mapping recu : #{mapping.inspect}"
+    ) if name.nil? || name.empty?
+
+    UI.message("Provisioning profile utilise : #{name}")
+    name
+  end
+
+  desc "Create or refresh App Store certificates and profiles"
+  lane :certificates do
+    setup_ci(timeout: 1800)
+
+    match(
+      type: "appstore",
+      app_identifier: APP_ID,
+      api_key: connect_api_key,
+      readonly: false,
+      keychain_name: ENV["MATCH_KEYCHAIN_NAME"],
+      keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
+    )
+  end
+
+  desc "Signed App Store build and upload to TestFlight"
+  lane :release do
+    setup_ci(timeout: 1800)
+    api_key = connect_api_key
+
+    match(
+      type: "appstore",
+      app_identifier: APP_ID,
+      api_key: api_key,
+      readonly: true,
+      keychain_name: ENV["MATCH_KEYCHAIN_NAME"],
+      keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
+    )
+
+    profile_name = appstore_profile_name
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "ios/Runner.xcodeproj",
+      team_id: ENV.fetch("APPLE_TEAM_ID"),
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile_name,
+      targets: ["Runner"],
+      build_configurations: ["Release"]
+    )
+
+    build_app(
+      workspace: "ios/Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store",
+      clean: false,
+      silent: false,
+      suppress_xcode_output: false,
+      xcargs: "COMPILER_INDEX_STORE_ENABLE=NO",
+      export_options: {
+        signingStyle: "manual",
+        teamID: ENV.fetch("APPLE_TEAM_ID"),
+        provisioningProfiles: {
+          APP_ID => profile_name
+        }
+      },
+      output_directory: "build/ios/ipa",
+      output_name: "LayerArt.ipa"
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: APP_ID,
+      ipa: "build/ios/ipa/LayerArt.ipa",
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

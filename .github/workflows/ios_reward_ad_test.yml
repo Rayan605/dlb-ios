@@ -1,0 +1,191 @@
+name: iOS Reward Ad Test
+
+on:
+  workflow_dispatch:
+#   push:
+#     branches:
+#       - main
+
+jobs:
+  test-reward-ad:
+    name: Test Reward Ad sur simulateur iOS
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    env:
+      CI: "true"
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Afficher les versions
+        run: |
+          set -euxo pipefail
+
+          flutter --version
+          dart --version
+          xcodebuild -version
+          pod --version
+          sw_vers
+
+      - name: Lister les simulateurs disponibles
+        run: |
+          set -euxo pipefail
+          xcrun simctl list devices available
+
+      - name: Sélectionner et démarrer un simulateur iPhone
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          # Sélectionne le premier simulateur iPhone disponible.
+          UDID="$(
+            xcrun simctl list devices available -j |
+            python3 -c '
+          import json
+          import sys
+
+          data = json.load(sys.stdin)
+
+          for runtime, devices in data.get("devices", {}).items():
+              for device in devices:
+                  if (
+                      device.get("isAvailable", False)
+                      and device.get("name", "").startswith("iPhone")
+                  ):
+                      print(device["udid"])
+                      raise SystemExit(0)
+
+          raise SystemExit("Aucun simulateur iPhone disponible")
+          '
+          )"
+
+          if [ -z "$UDID" ]; then
+            echo "::error::Aucun simulateur iPhone disponible."
+            exit 1
+          fi
+
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          echo "Simulateur sélectionné : $UDID"
+
+          # Nettoie l’état éventuel du simulateur avant le test.
+          xcrun simctl shutdown "$UDID" || true
+          xcrun simctl erase "$UDID" || true
+
+          xcrun simctl boot "$UDID"
+
+          echo "Attente du démarrage complet du simulateur..."
+          xcrun simctl bootstatus "$UDID" -b
+
+          echo "Simulateur démarré :"
+          xcrun simctl list devices | grep "$UDID" || true
+
+      - name: Installer les dépendances Flutter
+        run: |
+          set -euxo pipefail
+
+          mkdir -p build/ios/SourcePackages
+          flutter pub get
+
+      - name: Vérifier les dépendances Flutter
+        run: |
+          set -euxo pipefail
+          flutter pub deps --style=compact
+
+      - name: Installer les pods iOS
+        run: |
+          set -euxo pipefail
+
+          cd ios
+          pod install --repo-update
+
+      - name: Vérifier le simulateur avant le test
+        run: |
+          set -euxo pipefail
+
+          xcrun simctl bootstatus "$UDID" -b
+
+          echo "Appareils visibles par Flutter :"
+          flutter devices
+
+          echo "État du simulateur :"
+          xcrun simctl list devices | grep "$UDID" || true
+
+          echo "Informations du simulateur :"
+          xcrun simctl getenv "$UDID" SIMULATOR_MODEL_IDENTIFIER || true
+          xcrun simctl getenv "$UDID" SIMULATOR_RUNTIME_VERSION || true
+
+      - name: Lancer le test d'intégration Reward Ad
+        timeout-minutes: 15
+        env:
+          NSUnbufferedIO: "YES"
+        run: |
+          set -o pipefail
+
+          flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/reward_ad_test.dart \
+            --dart-define=AD_TEST_MODE=true \
+            -d "$UDID" \
+            2>&1 | tee reward-ad-test.log
+
+      - name: Afficher l'état après le test
+        if: always()
+        run: |
+          echo "État du simulateur :"
+          xcrun simctl list devices | grep "$UDID" || true
+
+          echo "Applications installées :"
+          xcrun simctl listapps "$UDID" || true
+
+          echo "Dernières lignes du test :"
+          tail -n 300 reward-ad-test.log || true
+
+      - name: Capturer l'écran du simulateur en cas d'échec
+        if: failure()
+        run: |
+          mkdir -p diagnostics
+
+          xcrun simctl io "$UDID" screenshot \
+            diagnostics/simulator-failure.png || true
+
+          xcrun simctl spawn "$UDID" log show \
+            --style compact \
+            --last 10m \
+            --predicate \
+            'process == "Runner" OR process == "SpringBoard"' \
+            > diagnostics/simulator.log 2>&1 || true
+
+      - name: Récupérer les captures d'écran
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reward-ad-screenshots
+          path: |
+            build/**/screenshots/**
+            screenshots/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Récupérer les logs et diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reward-ad-diagnostics
+          path: |
+            reward-ad-test.log
+            diagnostics/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Arrêter le simulateur
+        if: always()
+        run: |
+          xcrun simctl shutdown "$UDID" || true

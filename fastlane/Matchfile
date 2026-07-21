@@ -1,0 +1,7 @@
+git_url(ENV.fetch("MATCH_GIT_URL"))
+git_branch("master")
+storage_mode("git")
+type("appstore")
+app_identifier(["com.caziz.listeparty"])
+team_id(ENV.fetch("APPLE_TEAM_ID", "S9QMWU9M5N"))
+readonly(true)

@@ -1,0 +1,94 @@
+name: iOS Release (build signé + TestFlight)
+
+on:
+  workflow_dispatch:   # déclenchement manuel uniquement, jamais automatique
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    env:
+      CI: "true"
+      NSUnbufferedIO: "YES"          # sortie non bufferisee : on voit la progression en direct
+      FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "180"
+      FASTLANE_XCODE_LIST_TIMEOUT: "180"
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Installer fastlane
+        run: gem install fastlane -N
+
+      - name: Installer les dépendances Flutter
+        timeout-minutes: 10
+        run: |
+          set -euxo pipefail
+          mkdir -p build/ios/SourcePackages
+          flutter pub get
+
+      # Genere Generated.xcconfig + les artefacts Flutter necessaires a Xcode,
+      # SANS faire un build natif complet (qui serait refait par gym juste apres).
+      - name: Préparer les artefacts Flutter pour Xcode
+        timeout-minutes: 10
+        run: |
+          set -euxo pipefail
+          flutter precache --ios
+          flutter build ios-framework --no-debug --no-profile --output=build/flutter_frameworks || true
+          flutter pub get
+
+      - name: Installer les pods iOS
+        timeout-minutes: 15
+        run: |
+          set -euxo pipefail
+          cd ios
+          pod install --repo-update
+
+      - name: Build signé + upload TestFlight (fastlane)
+        timeout-minutes: 35
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          APPLE_TEAM_ID: "S9QMWU9M5N"
+        run: fastlane release --verbose
+
+      - name: Afficher les logs Xcode en cas d'échec
+        if: failure()
+        run: |
+          echo "=== Derniers logs gym ==="
+          tail -n 200 ~/Library/Logs/gym/*.log 2>/dev/null || echo "aucun log gym"
+          echo "=== Logs fastlane ==="
+          tail -n 100 fastlane/report.xml 2>/dev/null || true
+
+      - name: Récupérer l'IPA signé
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layerart-ipa-signed
+          path: |
+            build/ios/ipa/*.ipa
+            build/ios/ipa/*.app.dSYM.zip
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Récupérer les logs de build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-logs
+          path: |
+            /Users/runner/Library/Logs/gym/**
+            fastlane/report.xml
+          if-no-files-found: ignore
+          retention-days: 7

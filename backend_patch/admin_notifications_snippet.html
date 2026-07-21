@@ -1,0 +1,106 @@
+<!--
+  BLOC ADMIN — ENVOYER UNE NOTIFICATION
+  À coller dans admin.html (dans le <body>, là où tu veux qu'il apparaisse).
+  Il réutilise apiFetch() / auth déjà présents dans js/api.js.
+-->
+<section class="section" id="notif-admin" style="margin-top:40px;">
+  <div class="section-head">
+    <div>
+      <div class="section-eyebrow mono">Communication</div>
+      <h2 class="section-title">Envoyer une <span class="gold">notification</span></h2>
+    </div>
+  </div>
+
+  <div id="notifAlert"></div>
+
+  <div class="form" style="max-width:560px;">
+    <div class="field">
+      <label>Titre</label>
+      <input type="text" id="notifTitle" maxlength="120"
+             placeholder="Ex : Nouvelle soirée à Lyon 🔥">
+    </div>
+    <div class="field">
+      <label>Message</label>
+      <textarea id="notifBody" rows="3" maxlength="500"
+                placeholder="Ex : Réservations ouvertes pour le 12 juillet, places limitées."></textarea>
+    </div>
+    <div class="field">
+      <label>Lier à une soirée (optionnel)</label>
+      <select id="notifEvent">
+        <option value="">— Aucune —</option>
+      </select>
+    </div>
+    <button class="btn btn-gold btn-block" id="notifSend">Envoyer la notification →</button>
+  </div>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">Notifications envoyées</h3>
+  <div id="notifList"></div>
+</section>
+
+<script>
+(async function () {
+  const alertBox = document.getElementById('notifAlert');
+
+  // Pré-remplir le sélecteur de soirées
+  try {
+    const events = await apiFetch('/events?upcoming_only=false');
+    const sel = document.getElementById('notifEvent');
+    (Array.isArray(events) ? events : []).forEach(ev => {
+      const o = document.createElement('option');
+      o.value = ev.id;
+      o.textContent = `${ev.title} — ${ev.city}`;
+      sel.appendChild(o);
+    });
+  } catch (e) { /* silencieux */ }
+
+  async function loadNotifs() {
+    try {
+      const list = await apiFetch('/notifications');
+      const el = document.getElementById('notifList');
+      if (!list.length) { el.innerHTML = '<div class="empty-state">Aucune notification.</div>'; return; }
+      el.innerHTML = list.map(n => `
+        <div class="resa-card" style="align-items:center;">
+          <div class="resa-info">
+            <div class="resa-event-name">${n.title}</div>
+            <div class="resa-formula">${n.body}</div>
+            <div class="mono text-smoke" style="margin-top:4px;">${new Date(n.created_at).toLocaleString('fr-FR')}</div>
+          </div>
+          <button class="btn btn-outline" onclick="deleteNotif(${n.id})">Supprimer</button>
+        </div>`).join('');
+    } catch (e) { /* silencieux */ }
+  }
+
+  window.deleteNotif = async function (id) {
+    if (!confirm('Supprimer cette notification ?')) return;
+    try { await apiFetch('/admin/notifications/' + id, { method: 'DELETE' }); loadNotifs(); }
+    catch (e) { showAlert(alertBox, e.message); }
+  };
+
+  document.getElementById('notifSend').addEventListener('click', async () => {
+    clearAlert(alertBox);
+    const title = document.getElementById('notifTitle').value.trim();
+    const body  = document.getElementById('notifBody').value.trim();
+    const evId  = document.getElementById('notifEvent').value;
+    if (!title || !body) { showAlert(alertBox, 'Titre et message sont obligatoires.'); return; }
+    const btn = document.getElementById('notifSend');
+    btn.disabled = true; btn.textContent = 'Envoi...';
+    try {
+      await apiFetch('/admin/notifications', {
+        method: 'POST',
+        body: { title, body, event_id: evId ? +evId : null },
+      });
+      document.getElementById('notifTitle').value = '';
+      document.getElementById('notifBody').value = '';
+      document.getElementById('notifEvent').value = '';
+      showAlert(alertBox, 'Notification envoyée ✓', 'success');
+      loadNotifs();
+    } catch (e) {
+      showAlert(alertBox, e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Envoyer la notification →';
+    }
+  });
+
+  loadNotifs();
+})();
+</script>
