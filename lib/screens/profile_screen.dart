@@ -18,50 +18,64 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('PROFIL')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          if (user == null)
-            _loggedOut(context)
-          else ...[
-            _avatarCard(user),
-            const SizedBox(height: 24),
-            _tile(
-              context,
-              icon: Icons.link,
-              label: 'Rejoindre une invitation',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const InviteScreen()),
-              ),
-            ),
-            if (auth.canScan)
-              _infoBanner(
-                icon: Icons.qr_code_scanner,
-                title: 'Compte scanner activé',
-                subtitle:
-                    'Tu peux valider les billets à l\'entrée via l\'onglet Scanner.',
-              ),
-            const SizedBox(height: 8),
-            _tile(
-              context,
-              icon: Icons.logout,
-              label: 'Se déconnecter',
-              danger: true,
-              onTap: () => _confirmLogout(context, auth),
-            ),
-          ],
-          const SizedBox(height: 40),
-          Center(
-            child: Column(
-              children: [
-                Text(Config.siteName.toUpperCase(),
-                    style: AppTheme.heading(size: 20, color: AppColors.muted)),
-                Text(Config.siteSlogan,
-                    style: AppTheme.mono(size: 11, color: AppColors.muted)),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              if (user == null)
+                _loggedOut(context)
+              else ...[
+                _avatarCard(user),
+                const SizedBox(height: 24),
+                _tile(
+                  context,
+                  icon: Icons.link,
+                  label: 'Rejoindre une invitation',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InviteScreen()),
+                  ),
+                ),
+                if (auth.canScan)
+                  _infoBanner(
+                    icon: Icons.qr_code_scanner,
+                    title: 'Compte scanner activé',
+                    subtitle:
+                        'Tu peux valider les billets à l\'entrée via l\'onglet Scanner.',
+                  ),
+                const SizedBox(height: 8),
+                _tile(
+                  context,
+                  icon: Icons.logout,
+                  label: 'Se déconnecter',
+                  danger: true,
+                  onTap: () => _confirmLogout(context, auth),
+                ),
+                const SizedBox(height: 8),
+                _tile(
+                  context,
+                  icon: Icons.delete_forever_outlined,
+                  label: 'Supprimer mon compte',
+                  danger: true,
+                  onTap: () => _confirmDeleteAccount(context, auth),
+                ),
               ],
-            ),
+              const SizedBox(height: 40),
+              Center(
+                child: Column(
+                  children: [
+                    Text(Config.siteName.toUpperCase(),
+                        style: AppTheme.heading(size: 20, color: AppColors.muted)),
+                    Text(Config.siteSlogan,
+                        style: AppTheme.mono(size: 11, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -221,6 +235,47 @@ class ProfileScreen extends StatelessWidget {
     if (ok == true) {
       await auth.logout();
       if (context.mounted) showSnack(context, 'À bientôt dans le bon.');
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context, AuthProvider auth) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Supprimer ton compte ?', style: AppTheme.heading(size: 22)),
+        content: const Text(
+          'Cette action est définitive. Toutes tes réservations, invitations '
+          'et données personnelles seront supprimées. Tu ne pourras pas '
+          'revenir en arrière.',
+          style: TextStyle(color: AppColors.sub),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler', style: TextStyle(color: AppColors.sub)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer définitivement',
+                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      await auth.deleteAccount();
+      if (context.mounted) {
+        showSnack(context, 'Ton compte a été supprimé.');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) showSnack(context, 'Erreur : $e');
     }
   }
 }

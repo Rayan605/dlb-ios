@@ -93,30 +93,36 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1000),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                    color: AppColors.accent, shape: BoxShape.circle),
+              Row(
+                children: [
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration: const BoxDecoration(
+                        color: AppColors.accent, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(Config.siteName.toUpperCase(),
+                      style: AppTheme.heading(size: 26)),
+                  const SizedBox(width: 8),
+                  Text(Config.siteSlogan,
+                      style: AppTheme.mono(color: AppColors.accent, size: 11)),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(Config.siteName.toUpperCase(),
-                  style: AppTheme.heading(size: 26)),
-              const SizedBox(width: 8),
-              Text(Config.siteSlogan,
-                  style: AppTheme.mono(color: AppColors.accent, size: 11)),
+              const SizedBox(height: 14),
+              _toggle(),
             ],
           ),
-          const SizedBox(height: 14),
-          _toggle(),
-        ],
+        ),
       ),
     );
   }
@@ -158,25 +164,60 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Widget _grid(List<PartyEvent> events) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 320,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: 0.66,
-      ),
-      itemCount: events.length,
-      itemBuilder: (context, i) {
-        final ev = events[i];
-        void open() => Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => EventDetailScreen(eventId: ev.id)),
+    if (!_past) {
+      // Soirées à venir : une carte par ligne, pleine largeur.
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            itemCount: events.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, i) {
+              final ev = events[i];
+              return SizedBox(
+                height: 520,
+                child: EventCard(
+                  event: ev,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => EventDetailScreen(eventId: ev.id)),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Soirées précédentes : grille compacte inchangée.
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1000),
+        child: GridView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 240,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.66,
+          ),
+          itemCount: events.length,
+          itemBuilder: (context, i) {
+            final ev = events[i];
+            return RecapCard(
+              event: ev,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => EventDetailScreen(eventId: ev.id)),
+              ),
             );
-        return _past
-            ? RecapCard(event: ev, onTap: open)
-            : EventCard(event: ev, onTap: open);
-      },
+          },
+        ),
+      ),
     );
   }
 }

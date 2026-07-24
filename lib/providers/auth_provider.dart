@@ -106,4 +106,10 @@ class AuthProvider extends ChangeNotifier {
     await _persist();
     notifyListeners();
   }
+
+  /// Supprime le compte côté backend puis nettoie la session locale.
+  Future<void> deleteAccount() async {
+    await _api.deleteAccount();
+    await logout();
+  }
 }

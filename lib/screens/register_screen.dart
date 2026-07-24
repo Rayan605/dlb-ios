@@ -68,111 +68,117 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                Text('REJOINS\nLA LISTE', style: AppTheme.heading(size: 34)),
-                const SizedBox(height: 20),
-                Row(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _firstName,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'Prénom'),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Requis' : null,
-                      ),
+                    const SizedBox(height: 8),
+                    Text('REJOINS\nLA LISTE', style: AppTheme.heading(size: 34)),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _firstName,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(labelText: 'Prénom'),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lastName,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(labelText: 'Nom'),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _lastName,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'Nom'),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator: (v) =>
+                          (v == null || !v.contains('@')) ? 'Email invalide' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    _genderSelector(),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _social,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Insta ou Snap',
+                        hintText: '@ton_pseudo',
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Ton insta ou snap est obligatoire'
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: _obscure,
+                      decoration: InputDecoration(
+                        labelText: 'Mot de passe',
+                        helperText: '8 caractères minimum',
+                        helperStyle: const TextStyle(color: AppColors.muted),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                              _obscure ? Icons.visibility_off : Icons.visibility,
+                              color: AppColors.sub),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                      ),
+                      validator: (v) => (v == null || v.length < 8)
+                          ? '8 caractères minimum'
+                          : null,
+                    ),
+                    const SizedBox(height: 26),
+                    ElevatedButton(
+                      onPressed: _loading ? null : _submit,
+                      child: _loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.black))
+                          : const Text('Je veux être dans le bon →'),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text.rich(
+                          TextSpan(
+                            text: 'Déjà un compte ? ',
+                            style: TextStyle(color: AppColors.sub),
+                            children: [
+                              TextSpan(
+                                text: 'Connexion',
+                                style: TextStyle(
+                                    color: AppColors.accent,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'Email invalide' : null,
-                ),
-                const SizedBox(height: 14),
-                _genderSelector(),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _social,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Insta ou Snap',
-                    hintText: '@ton_pseudo',
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Ton insta ou snap est obligatoire'
-                      : null,
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _password,
-                  obscureText: _obscure,
-                  decoration: InputDecoration(
-                    labelText: 'Mot de passe',
-                    helperText: '8 caractères minimum',
-                    helperStyle: const TextStyle(color: AppColors.muted),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                          _obscure ? Icons.visibility_off : Icons.visibility,
-                          color: AppColors.sub),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                  validator: (v) => (v == null || v.length < 8)
-                      ? '8 caractères minimum'
-                      : null,
-                ),
-                const SizedBox(height: 26),
-                ElevatedButton(
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.black))
-                      : const Text('Je veux être dans le bon →'),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text.rich(
-                      TextSpan(
-                        text: 'Déjà un compte ? ',
-                        style: TextStyle(color: AppColors.sub),
-                        children: [
-                          TextSpan(
-                            text: 'Connexion',
-                            style: TextStyle(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

@@ -79,6 +79,11 @@ class ApiService {
     return _decode(res);
   }
 
+  Future<dynamic> _delete(String path) async {
+    final res = await http.delete(_uri(path), headers: _headers());
+    return _decode(res);
+  }
+
   // ─── AUTH ────────────────────────────────────────────────
   /// Retourne le map brut { access_token, token_type, user }.
   Future<Map<String, dynamic>> register({
@@ -114,6 +119,12 @@ class ApiService {
   Future<Map<String, dynamic>> me() async {
     final data = await _get('/auth/me');
     return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Supprime définitivement le compte de l'utilisateur connecté
+  /// (exigence Apple App Store 5.1.1(v) — account deletion).
+  Future<void> deleteAccount() async {
+    await _delete('/auth/me');
   }
 
   // ─── EVENTS ──────────────────────────────────────────────
@@ -236,4 +247,5 @@ class ApiService {
         .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+  
 }

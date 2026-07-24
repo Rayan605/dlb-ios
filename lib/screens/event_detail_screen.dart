@@ -140,7 +140,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Widget _gallery(PartyEvent ev) {
     if (ev.images.isEmpty) {
       return AspectRatio(
-        aspectRatio: 16 / 10,
+        aspectRatio: 8 / 10,
         child: Container(
           color: AppColors.raised,
           alignment: Alignment.center,
@@ -153,7 +153,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     return Column(
       children: [
         AspectRatio(
-          aspectRatio: 16 / 10,
+          aspectRatio: 8 / 10,
           child: CachedNetworkImage(imageUrl: main.url, fit: BoxFit.cover),
         ),
         if (ev.images.length > 1)

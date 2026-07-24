@@ -92,31 +92,37 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   }
 
   Widget _list(_ResaBundle b) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      children: [
-        if (b.reservations.isNotEmpty) ...[
-          Text('MES RÉSERVATIONS', style: AppTheme.heading(size: 20)),
-          const SizedBox(height: 14),
-          ...b.reservations.map(_reservationCard),
-        ],
-        if (b.guests.isNotEmpty) ...[
-          const SizedBox(height: 26),
-          RichText(
-            text: TextSpan(
-              style: AppTheme.heading(size: 20),
-              children: [
-                const TextSpan(text: 'MES '),
-                TextSpan(
-                    text: 'INVITATIONS',
-                    style: AppTheme.heading(size: 20, color: AppColors.lime)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...b.guests.map(_guestCard),
-        ],
-      ],
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            if (b.reservations.isNotEmpty) ...[
+              Text('MES RÉSERVATIONS', style: AppTheme.heading(size: 20)),
+              const SizedBox(height: 14),
+              ...b.reservations.map(_reservationCard),
+            ],
+            if (b.guests.isNotEmpty) ...[
+              const SizedBox(height: 26),
+              RichText(
+                text: TextSpan(
+                  style: AppTheme.heading(size: 20),
+                  children: [
+                    const TextSpan(text: 'MES '),
+                    TextSpan(
+                        text: 'INVITATIONS',
+                        style: AppTheme.heading(size: 20, color: AppColors.lime)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              ...b.guests.map(_guestCard),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
